@@ -42,17 +42,18 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 5000;
+const HOST = '0.0.0.0';
 
 const server = http.createServer(app);
 
 function startServer() {
-  server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on port ${PORT}`);
+  server.listen(PORT, HOST, () => {
+    console.log(`Server running on ${HOST}:${PORT}`);
   }).on('error', (error) => {
     if (error.code === 'EADDRINUSE') {
       console.log(`Port ${PORT} is already in use. Trying another port...`);
-      server.listen(0); // Let the OS assign a random available port
+      server.listen(0, HOST); // Let the OS assign a random available port
     } else {
       console.error('Server error:', error);
     }
