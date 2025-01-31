@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: upskill-global-backend
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: MONGO_URI
+        value: mongodb+srv://boopathid:Boopathi2001@boopathi.rjk1x.mongodb.net/upskill_global?authSource=admin&retryWrites=true&w=majority
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PORT
+        value: 5000
+      - key: NODE_ENV
+        value: production
