@@ -42,12 +42,12 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT;
 
 const server = http.createServer(app);
 
 function startServer() {
-  server.listen(PORT, () => {
+  server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
   }).on('error', (error) => {
     if (error.code === 'EADDRINUSE') {
