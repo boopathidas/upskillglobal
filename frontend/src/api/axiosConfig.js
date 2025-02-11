@@ -1,7 +1,9 @@
 import axios from 'axios';
 
-// Use environment variable or fallback to localhost
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+// Use local backend URL
+const BASE_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://upskillglobal-backend.up.railway.app/api'
+  : 'http://localhost:5000/api';
 
 const axiosInstance = axios.create({
   baseURL: BASE_URL,

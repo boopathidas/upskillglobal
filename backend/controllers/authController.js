@@ -62,14 +62,25 @@ function generateUsername(firstName, lastName) {
   const sanitizedFirstName = firstName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
   const sanitizedLastName = lastName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
   
-  // Truncate to ensure username is not too long
-  const truncFirstName = sanitizedFirstName.slice(0, 10);
-  const truncLastName = sanitizedLastName.slice(0, 10);
+  // Use first 4 chars of first name and last name
+  const truncFirstName = sanitizedFirstName.slice(0, 4);
+  const truncLastName = sanitizedLastName.slice(0, 4);
   
   const currentYear = new Date().getFullYear();
   
   // Create a consistent username format
   return `${truncFirstName}${truncLastName}${currentYear}`.toLowerCase();
+}
+
+// Password generation function
+function generatePassword() {
+  const length = 8;
+  const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let password = '';
+  for (let i = 0, n = charset.length; i < length; ++i) {
+    password += charset.charAt(Math.floor(Math.random() * n));
+  }
+  return password;
 }
 
 exports.registerStudent = async (req, res) => {
@@ -95,155 +106,95 @@ exports.registerStudent = async (req, res) => {
       emergencyContactPhone = ''
     } = req.body;
 
+    // Normalize gender
+    const normalizedGender = gender.charAt(0).toUpperCase() + gender.slice(1).toLowerCase();
+
     // Validate input
     const validationErrors = validateInput(req.body);
     if (validationErrors.length > 0) {
       console.error('Validation errors:', validationErrors);
       return res.status(400).json({ 
-        message: 'Validation Error', 
+        message: 'Validation failed', 
         errors: validationErrors 
       });
     }
 
-    // Normalize gender
-    const normalizedGender = gender.charAt(0).toUpperCase() + gender.slice(1).toLowerCase();
-
-    // Find course by name if a string is provided
-    let courseId = null;
-    if (course) {
-      try {
-        console.log('Attempting to find course:', course);
-        
-        // Log all courses for debugging
-        const allCourses = await Course.find({});
-        console.log('All available courses:', allCourses.map(c => c.name));
-        
-        const foundCourse = await Course.findOne({ name: course });
-        
-        console.log('Found course:', foundCourse);
-        
-        if (foundCourse) {
-          courseId = foundCourse._id;
-        } else {
-          console.warn(`Course not found: ${course}`);
-          // If course not found, log a warning but continue
-          return res.status(400).json({
-            message: 'Validation Error',
-            errors: [{
-              field: 'course',
-              message: `Course "${course}" not found. Available courses: ${allCourses.map(c => c.name).join(', ')}`
-            }]
-          });
-        }
-      } catch (courseError) {
-        console.error('Error finding course:', courseError);
-        return res.status(500).json({
-          message: 'Internal Server Error',
-          error: 'Could not process course selection'
-        });
-      }
+    // Check if student with this email already exists
+    const existingStudent = await Student.findOne({ email });
+    if (existingStudent) {
+      return res.status(400).json({ 
+        message: 'Student with this email already exists' 
+      });
     }
 
-    const safeFirstName = String(firstName).trim();
-    const safeLastName = String(lastName).trim();
-    const fullName = `${safeFirstName} ${safeLastName}`;
+    // Generate unique username
+    const username = generateUsername(firstName, lastName);
+    
+    // Generate password
+    const password = generatePassword();
 
-    // Generate username and password
-    const currentYear = new Date().getFullYear();
-    const username = generateUsername(safeFirstName, safeLastName);
-    const password = `student_${currentYear}`;
-
-    // Add logging to track username generation
-    console.log('Generated credentials:', { 
-      firstName: safeFirstName, 
-      lastName: safeLastName,
-      username, 
-      password 
-    });
-
-    // Hash password
+    // Hash the password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Prepare student data with extensive null checks
-    const studentData = {
-      fullName,
+    // Create new student
+    const newStudent = new Student({
+      fullName: `${firstName} ${lastName}`,
       username,
       password: hashedPassword,
       email,
       mobileNumber: phone,
-      course: courseId,
-      qualification: educationLevel || '',
+      course: course ? await Course.findOne({ name: course }) : null,
+      qualification: educationLevel,
       gender: normalizedGender,
+      dateOfBirth,
       address: {
-        street: address || '',
-        city: city || '',
-        state: state || '',
-        country: country || ''
+        street: address,
+        city,
+        state,
+        country
       },
-      dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
       emergencyContact: {
-        name: emergencyContactName || '',
-        phone: emergencyContactPhone || ''
+        name: emergencyContactName,
+        mobileNumber: emergencyContactPhone
       }
-    };
+    });
 
-    // Create and save student
-    const student = new Student(studentData);
+    // Save student
+    await newStudent.save();
 
-    try {
-      const savedStudent = await student.save();
+    // Respond with success and credentials
+    res.status(201).json({
+      message: 'Student registered successfully',
+      username: username,
+      password: password  // Send plain text password for initial login
+    });
+  } catch (error) {
+    console.error('Registration error:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+      fullError: JSON.stringify(error, Object.getOwnPropertyNames(error), 2)
+    });
+
+    // Check for specific MongoDB validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => ({
+        field: err.path,
+        message: err.message
+      }));
       
-      console.log('Student registered successfully:', savedStudent);
-      
-      res.status(201).json({
-        message: 'Student registered successfully',
-        username,
-        password
-      });
-    } catch (saveError) {
-      console.error('Error saving student:', saveError);
-      
-      // Handle specific Mongoose validation errors
-      if (saveError.name === 'ValidationError') {
-        const errors = Object.values(saveError.errors).map(err => ({
-          field: err.path,
-          message: err.message
-        }));
-        return res.status(400).json({ 
-          message: 'Validation Error', 
-          errors 
-        });
-      }
-
-      // Handle duplicate key errors
-      if (saveError.code === 11000) {
-        const duplicateField = Object.keys(saveError.keyPattern)[0];
-        return res.status(409).json({ 
-          message: 'Duplicate Entry', 
-          field: duplicateField 
-        });
-      }
-
-      // Generic save error
-      return res.status(500).json({ 
-        message: 'Error saving student', 
-        error: saveError.message,
-        details: saveError.toString()
+      return res.status(400).json({ 
+        message: 'Validation failed', 
+        errors: validationErrors 
       });
     }
-  } catch (error) {
-    console.error('Unexpected registration error:', error);
-    
-    // Comprehensive error response
+
+    // Generic server error response
     res.status(500).json({ 
-      message: 'Unexpected error during registration', 
-      error: error.message,
-      details: error.toString(),
-      stack: error.stack 
+      message: 'Registration failed', 
+      error: error.message 
     });
-  } finally {
-    console.log('===== REGISTRATION REQUEST END =====');
   }
 };
 
@@ -305,9 +256,40 @@ exports.studentLogin = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error during login:', error);
+    console.error('Error during login:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+      fullError: JSON.stringify(error, Object.getOwnPropertyNames(error), 2)
+    });
+
+    // Generic server error response
     res.status(500).json({ 
       message: 'Server error', 
+      error: error.message 
+    });
+  }
+};
+
+exports.getEnrolledStudents = async (req, res) => {
+  try {
+    const students = await Student.find()
+      .populate('course', 'name')  // Populate course details
+      .select('fullName email course createdAt')
+      .sort({ createdAt: -1 });  // Sort by most recent first
+
+    res.status(200).json(students);
+  } catch (error) {
+    console.error('Error fetching enrolled students:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+      fullError: JSON.stringify(error, Object.getOwnPropertyNames(error), 2)
+    });
+
+    // Generic server error response
+    res.status(500).json({ 
+      message: 'Failed to fetch enrolled students', 
       error: error.message 
     });
   }

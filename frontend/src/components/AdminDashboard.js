@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bar } from 'react-chartjs-2';
-import axios from 'axios';
+import axios from '../api/axiosConfig';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -29,6 +29,9 @@ const AdminDashboard = () => {
     labels: [],
     datasets: []
   });
+  const [enrolledStudents, setEnrolledStudents] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     // Fetch student count and course data
@@ -52,6 +55,20 @@ const AdminDashboard = () => {
 
     fetchDashboardData();
   }, []);
+
+  const fetchEnrolledStudents = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get('/students/enrolled');
+      setEnrolledStudents(response.data);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching enrolled students:', err);
+      setError('Failed to fetch enrolled students');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const renderContent = () => {
     switch(activeSection) {
@@ -92,11 +109,49 @@ const AdminDashboard = () => {
       case 'trainer-registration':
         return <div>Trainer Registration Form</div>;
       case 'enrolled-students':
-        return <div>Enrolled Students List</div>;
+        return (
+          <div className="enrolled-students-container">
+            <h2>Enrolled Students</h2>
+            {loading ? (
+              <p>Loading students...</p>
+            ) : error ? (
+              <p className="error">{error}</p>
+            ) : enrolledStudents.length === 0 ? (
+              <p>No students enrolled yet.</p>
+            ) : (
+              <table className="enrolled-students-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Course</th>
+                    <th>Registration Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {enrolledStudents.map((student) => (
+                    <tr key={student._id}>
+                      <td>{`${student.firstName} ${student.lastName}`}</td>
+                      <td>{student.email}</td>
+                      <td>{student.course?.name || 'N/A'}</td>
+                      <td>{new Date(student.createdAt).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        );
       default:
         return null;
     }
   };
+
+  useEffect(() => {
+    if (activeSection === 'enrolled-students') {
+      fetchEnrolledStudents();
+    }
+  }, [activeSection]);
 
   return (
     <div className="admin-dashboard-container">

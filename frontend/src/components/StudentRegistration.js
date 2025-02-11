@@ -1,5 +1,34 @@
 import React, { useState } from 'react';
 import axios from '../api/axiosConfig';
+import './StudentRegistration.css';  
+
+const CredentialsModal = ({ credentials, onClose }) => {
+  if (!credentials) return null;
+
+  return (
+    <div className="modal-backdrop">
+      <div className="modal-content">
+        <div className="modal-header">
+          <h3>Login Credentials</h3>
+          <button onClick={onClose} className="modal-close-btn">&times;</button>
+        </div>
+        <div className="modal-body">
+          <p>Please save these credentials securely:</p>
+          <div className="credentials-display">
+            <p><strong>Username:</strong> {credentials.username}</p>
+            <p><strong>Password:</strong> {credentials.password}</p>
+          </div>
+          <div className="credentials-warning">
+            ⚠️ Please change your password after first login.
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button onClick={onClose} className="btn btn-secondary">Close</button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const StudentRegistration = () => {
   const [formData, setFormData] = useState({
@@ -22,6 +51,7 @@ const StudentRegistration = () => {
   const [errors, setErrors] = useState({});
   const [submitStatus, setSubmitStatus] = useState(null);
   const [loginCredentials, setLoginCredentials] = useState(null);
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
 
   const courses = [
     'React Fundamentals',
@@ -148,13 +178,15 @@ const StudentRegistration = () => {
         console.log('Attempting student registration:', registrationData);
 
         // Update registration endpoint
-        const response = await axios.post('/api/students/register', registrationData);
+        const response = await axios.post('students/register', registrationData);
         
         console.log('Registration response:', response.data);
         
         // Set login credentials to display
         setLoginCredentials(credentials);
         
+        setShowCredentialsModal(true);
+
         setSubmitStatus({
           type: 'success',
           message: 'Student registered successfully!'
@@ -181,34 +213,56 @@ const StudentRegistration = () => {
         console.error('Registration error:', error.response ? error.response.data : error.message);
         
         // Handle different types of errors
-        if (error.response && error.response.data.errors) {
+        if (error.response) {
+          // Log full error response for debugging
+          console.error('Full error response:', JSON.stringify(error.response, null, 2));
+          
           // Handle validation errors from backend
           const errorMessages = error.response.data.errors
-            .map(err => `${err.field}: ${err.message}`)
-            .join('; ');
+            ? error.response.data.errors
+              .map(err => `${err.field}: ${err.message}`)
+              .join('; ')
+            : error.response.data.message || 'Registration failed';
           
           setSubmitStatus({
             type: 'error',
             message: errorMessages
           });
-        } else {
-          // Generic error handling
-          const errorMessage = error.response?.data?.message || 
-                               'Registration failed. Please try again.';
-          
+        } else if (error.request) {
+          // The request was made but no response was received
+          console.error('No response received:', error.request);
           setSubmitStatus({
             type: 'error',
-            message: errorMessage
+            message: 'No response from server. Please check your connection.'
+          });
+        } else {
+          // Something happened in setting up the request
+          console.error('Error setting up request:', error.message);
+          setSubmitStatus({
+            type: 'error',
+            message: 'An unexpected error occurred. Please try again.'
           });
         }
       }
     }
   };
 
+  const handleCloseCredentialsModal = () => {
+    setShowCredentialsModal(false);
+  };
+
   return (
     <div className="student-registration-container">
       <div className="registration-form-wrapper">
         <h2>Student Registration</h2>
+        
+        {/* Registration Status Alert */}
+        {submitStatus && (
+          <div className={`alert ${submitStatus.type === 'success' ? 'alert-success' : 'alert-danger'}`}>
+            {submitStatus.message}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="registration-form">
           <div className="form-row">
             <div className="form-group">
@@ -365,27 +419,6 @@ const StudentRegistration = () => {
             </div>
           </div>
 
-          {submitStatus && (
-            <div className={`submit-status ${submitStatus.type}`}>
-              {submitStatus.message}
-            </div>
-          )}
-
-          {loginCredentials && (
-            <div className="login-credentials-popup">
-              <h3>Login Credentials</h3>
-              <p>Please save these credentials securely:</p>
-              <div className="credentials-box">
-                <p><strong>Username:</strong> {loginCredentials.username}</p>
-                <p><strong>Password:</strong> {loginCredentials.password}</p>
-              </div>
-              <p className="warning">
-                ⚠️ These credentials will only be shown once. 
-                Make sure to save them securely.
-              </p>
-            </div>
-          )}
-
           <div className="form-actions">
             <button type="submit" className="btn btn-primary">
               Register Student
@@ -400,6 +433,14 @@ const StudentRegistration = () => {
             </button>
           </div>
         </form>
+
+        {/* Credentials Modal */}
+        {showCredentialsModal && (
+          <CredentialsModal 
+            credentials={loginCredentials} 
+            onClose={handleCloseCredentialsModal} 
+          />
+        )}
       </div>
     </div>
   );
