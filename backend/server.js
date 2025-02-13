@@ -9,58 +9,65 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Connect to Database
-connectDB();
-
-// Cors Configuration for Azure and Local Development
+// Enhanced CORS Configuration for Azure
 const corsOptions = {
   origin: [
     'http://localhost:3000', 
-    'https://my-upskill-global.azurewebsites.net', // Replace with your actual frontend URL
-    'https://my-upskill-global-backend.azurewebsites.net', // Replace with your actual backend URL
+    'https://my-upskill-global.azurewebsites.net', 
+    'https://my-upskill-global-backend.azurewebsites.net', 
     '*'
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 };
 
+// Middleware
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Health Check Endpoint for Azure App Service
+// Azure-specific Health Check Endpoint
 app.get('/', (req, res) => {
   res.status(200).json({
     status: 'healthy',
     message: 'Backend is running successfully',
+    environment: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString()
   });
 });
 
-// Logging middleware
+// Logging Middleware with Enhanced Error Tracking
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-  console.log('Request Body:', JSON.stringify(req.body, null, 2));
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} - ${res.statusCode} (${duration}ms)`);
+  });
   next();
 });
 
+// Database Connection
+try {
+  connectDB();
+} catch (error) {
+  console.error('Database Connection Error:', error);
+  process.exit(1);
+}
+
 // Routes
-app.use('/api', (req, res, next) => {
-  next();
-});
 app.use('/api/students', require('./routes/studentRoutes'));
 app.use('/api/courses', require('./routes/courseRoutes'));
 
-// Global error handling middleware
+// Global Error Handler
 app.use((err, req, res, next) => {
   console.error('Unhandled Error:', err);
   
-  // Determine the appropriate status code
   const statusCode = err.status || 500;
-  
-  res.status(statusCode).json({
+  const errorResponse = {
     message: err.message || 'An unexpected error occurred',
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  });
+  };
+
+  res.status(statusCode).json(errorResponse);
 });
 
 function startServer() {
@@ -76,13 +83,14 @@ function startServer() {
 
 const server = startServer();
 
-// Graceful shutdown
+// Graceful Shutdown
 process.on('SIGINT', () => {
   console.log('Shutting down server...');
   server.close(() => {
-    console.log('Server stopped.');
+    console.log('Server shut down.');
     process.exit(0);
   });
 });
 
-module.exports = app; // For Azure Functions compatibility
+// Azure Functions Compatibility
+module.exports = app;

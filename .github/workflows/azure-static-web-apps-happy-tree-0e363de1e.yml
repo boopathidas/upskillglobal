@@ -21,6 +21,13 @@ jobs:
           submodules: true
           lfs: false
 
+      - name: Debug Information
+        run: |
+          echo "GitHub Ref: ${{ github.ref }}"
+          echo "GitHub Event: ${{ github.event_name }}"
+          pwd
+          ls -la
+
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
@@ -43,24 +50,40 @@ jobs:
 
       - name: Install Frontend Dependencies
         working-directory: ./frontend
-        run: npm ci --prefer-offline --no-audit
+        run: |
+          npm ci --prefer-offline --no-audit
+          echo "Frontend Dependencies Installed"
 
       - name: Build Frontend
         working-directory: ./frontend
-        run: npm run build
+        run: |
+          npm run build
+          echo "Frontend Build Complete"
+          ls -la build
         env:
           CI: false  # Disable warnings as errors
 
       - name: Install Backend Dependencies
         working-directory: ./backend
-        run: npm ci --prefer-offline --no-audit
+        run: |
+          npm ci --prefer-offline --no-audit
+          echo "Backend Dependencies Installed"
 
       - name: Build Backend
         working-directory: ./backend
-        run: npm run build
+        run: |
+          npm run build
+          echo "Backend Build Complete"
         env:
           MONGO_URI: ${{ secrets.MONGO_URI }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+      - name: Validate Build Artifacts
+        run: |
+          echo "Frontend Build Size:"
+          du -sh frontend/build
+          echo "Backend Build Size:"
+          du -sh backend/build || echo "No backend build directory"
 
       - name: Cleanup Large Files
         run: |
@@ -77,6 +100,14 @@ jobs:
           app_location: "./frontend"
           api_location: "./backend"
           output_location: "build"
+
+      - name: Deployment Diagnostics
+        if: failure()
+        run: |
+          echo "Deployment Failed"
+          echo "Checking build artifacts..."
+          ls -la frontend/build
+          ls -la backend || true
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
