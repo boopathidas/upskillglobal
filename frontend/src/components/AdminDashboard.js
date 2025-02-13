@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+// eslint-disable-next-line no-unused-vars
 import { useNavigate } from 'react-router-dom';
 import { Bar } from 'react-chartjs-2';
 import axios from '../api/axiosConfig';
@@ -22,6 +23,7 @@ ChartJS.register(
 );
 
 const AdminDashboard = () => {
+  // eslint-disable-next-line no-unused-vars
   const navigate = useNavigate();
   const [studentCount, setStudentCount] = useState(0);
   const [activeSection, setActiveSection] = useState('dashboard');
