@@ -109,14 +109,14 @@ const StudentDashboard = () => {
 
   const handleTopicSelect = (topic) => {
     setSelectedTopic(topic);
-    setAssessmentSubmitted(false);
     setAssessmentAnswers({});
+    setAssessmentSubmitted(false);
   };
 
-  const handleAnswerSelect = (questionId, selectedOption) => {
+  const handleAnswerSelect = (questionId, selectedOptionIndex) => {
     setAssessmentAnswers(prev => ({
       ...prev,
-      [questionId]: selectedOption
+      [questionId]: selectedOptionIndex
     }));
   };
 
