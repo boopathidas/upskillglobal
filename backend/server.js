@@ -7,22 +7,34 @@ const http = require('http');
 dotenv.config();
 
 const app = express();
+const PORT = process.env.PORT || 3001;
 
 // Connect to Database
 connectDB();
 
-// Middleware
-app.use(cors({
+// Cors Configuration for Azure and Local Development
+const corsOptions = {
   origin: [
     'http://localhost:3000', 
-    'https://upskillglobal-frontend.up.railway.app', 
-    'https://upskillglobal-backend.up.railway.app',
+    'https://my-upskill-global.azurewebsites.net', // Replace with your actual frontend URL
+    'https://my-upskill-global-backend.azurewebsites.net', // Replace with your actual backend URL
     '*'
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
-}));
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
+
+// Health Check Endpoint for Azure App Service
+app.get('/', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    message: 'Backend is running successfully',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Logging middleware
 app.use((req, res, next) => {
@@ -51,28 +63,18 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 5000;
-const HOST = '0.0.0.0';
-
-const server = http.createServer(app);
-
 function startServer() {
-  server.listen(PORT, HOST, () => {
-    console.log(`Server running on ${HOST}:${PORT}`);
-  }).on('error', (error) => {
-    if (error.code === 'EADDRINUSE') {
-      console.log(`Port ${PORT} is already in use. Trying another port...`);
-      server.listen(0, HOST); // Let the OS assign a random available port
-    } else {
-      console.error('Server error:', error);
-    }
+  const server = http.createServer(app);
+  
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   });
 
-  server.on('listening', () => {
-    const address = server.address();
-    console.log(`Server is running on port ${address.port}`);
-  });
+  return server;
 }
+
+const server = startServer();
 
 // Graceful shutdown
 process.on('SIGINT', () => {
@@ -83,4 +85,4 @@ process.on('SIGINT', () => {
   });
 });
 
-startServer();
+module.exports = app; // For Azure Functions compatibility

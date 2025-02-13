@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "build": "echo 'No build step needed for backend'",
+    "build": "cross-env NODE_ENV=production echo 'Backend build completed'",
     "dev": "nodemon server.js",
     "test": "echo \"No tests specified\" && exit 0"
   },
@@ -13,7 +13,11 @@
     "node": ">=16.0.0",
     "npm": ">=8.0.0"
   },
-  "keywords": ["education", "student", "registration"],
+  "keywords": [
+    "education",
+    "student",
+    "registration"
+  ],
   "author": "Boopathi D",
   "license": "ISC",
   "dependencies": {
@@ -25,6 +29,7 @@
     "mongoose": "^7.0.3"
   },
   "devDependencies": {
+    "cross-env": "^7.0.3",
     "nodemon": "^2.0.22"
   }
 }

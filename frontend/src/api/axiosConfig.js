@@ -1,9 +1,10 @@
 import axios from 'axios';
 
-// Use local backend URL
-const BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://upskillglobal-backend.up.railway.app/api'
-  : 'http://localhost:5000/api';
+// Dynamic Backend URL for different environments
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 
+  (process.env.NODE_ENV === 'production' 
+    ? 'https://my-upskill-global-backend.azurewebsites.net/api'
+    : 'http://localhost:5000/api');
 
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
@@ -13,7 +14,7 @@ const axiosInstance = axios.create({
   }
 });
 
-// Optional: Add request interceptor for adding auth token
+// Request interceptor for adding auth token
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('studentToken');
@@ -23,6 +24,15 @@ axiosInstance.interceptors.request.use(
     return config;
   },
   (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor for global error handling
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('API Error:', error.response?.data || error.message);
     return Promise.reject(error);
   }
 );
