@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from '../api/axiosConfig';
 
 const courses = {
   'computer-science': {
@@ -121,23 +120,27 @@ const StudentDashboard = () => {
   };
 
   const submitAssessment = () => {
-    const course = courses[selectedCourse];
-    const topic = course.topics.find(t => t.id === selectedTopic.id);
-    
-    const correctAnswers = topic.assessment.questions.filter((q, index) => 
-      assessmentAnswers[q.id] === q.correctAnswer
-    ).length;
+    let correctAnswers = 0;
+    const totalQuestions = selectedTopic.assessment.questions.length;
 
-    const totalQuestions = topic.assessment.questions.length;
+    selectedTopic.assessment.questions.forEach(question => {
+      if (assessmentAnswers[question.id] === question.correctAnswer) {
+        correctAnswers++;
+      }
+    });
+
     const passPercentage = (correctAnswers / totalQuestions) * 100;
 
-    alert(`Assessment Submitted!\nScore: ${correctAnswers}/${totalQuestions} (${passPercentage.toFixed(2)}%)`);
-    
-    if (passPercentage >= 70) {
-      topic.completed = true;
+    // Use assessmentSubmitted to control submission logic
+    if (!assessmentSubmitted) {
+      setAssessmentSubmitted(true);
+      
+      alert(`Assessment Submitted!\nScore: ${correctAnswers}/${totalQuestions} (${passPercentage.toFixed(2)}%)`);
+      
+      if (passPercentage >= 70) {
+        selectedTopic.completed = true;
+      }
     }
-
-    setAssessmentSubmitted(true);
   };
 
   const currentCourse = courses[selectedCourse];
@@ -191,7 +194,7 @@ const StudentDashboard = () => {
                 onClick={submitAssessment}
                 disabled={Object.keys(assessmentAnswers).length !== selectedTopic.assessment.questions.length}
               >
-                Submit Assessment
+                {assessmentSubmitted ? 'Assessment Completed' : 'Submit Assessment'}
               </button>
             </div>
           )}
