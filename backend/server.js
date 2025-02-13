@@ -19,7 +19,7 @@ process.on('uncaughtException', (error) => {
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || process.env.WEBSITE_PORT || 3001;
 
 // Robust CORS Configuration
 const corsOptions = {

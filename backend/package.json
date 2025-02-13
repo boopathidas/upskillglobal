@@ -17,11 +17,7 @@
     "azure:predeploy": "npm prune --production",
     "azure:postdeploy": "echo 'Deployment completed'"
   },
-  "keywords": [
-    "education",
-    "student",
-    "registration"
-  ],
+  "keywords": ["education", "student", "registration"],
   "author": "Boopathi D",
   "license": "ISC",
   "dependencies": {
