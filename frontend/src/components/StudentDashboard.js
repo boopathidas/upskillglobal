@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-// eslint-disable-next-line no-unused-vars
 import axios from '../api/axiosConfig';
 
 const courses = {
@@ -88,17 +87,18 @@ const StudentDashboard = () => {
   const [assessmentSubmitted, setAssessmentSubmitted] = useState(false);
 
   useEffect(() => {
-    // Fetch student data (mock for now)
     const fetchStudentData = async () => {
       try {
-        // eslint-disable-next-line no-unused-vars
         const studentId = localStorage.getItem('studentId');
-        // Mock API call
         const studentData = {
           name: 'John Doe',
           enrolledCourses: ['computer-science']
         };
         setSelectedCourse(studentData.enrolledCourses[0]);
+        
+        if (studentId) {
+          console.log('Student ID:', studentId);
+        }
       } catch (error) {
         console.error('Error fetching student data', error);
       }
@@ -133,7 +133,6 @@ const StudentDashboard = () => {
 
     alert(`Assessment Submitted!\nScore: ${correctAnswers}/${totalQuestions} (${passPercentage.toFixed(2)}%)`);
     
-    // Mark topic as completed if score is above 70%
     if (passPercentage >= 70) {
       topic.completed = true;
     }
