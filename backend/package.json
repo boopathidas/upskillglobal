@@ -3,15 +3,15 @@
   "version": "1.0.0",
   "description": "Backend for Upskill Global Student Registration System",
   "main": "server.js",
+  "engines": {
+    "node": "18.x"
+  },
   "scripts": {
     "start": "node server.js",
-    "build": "cross-env NODE_ENV=production echo 'Backend build completed'",
     "dev": "nodemon server.js",
+    "build": "echo 'Preparing backend for deployment'",
+    "azure-deploy": "npm install && npm run build",
     "test": "echo \"No tests specified\" && exit 0"
-  },
-  "engines": {
-    "node": ">=16.0.0",
-    "npm": ">=8.0.0"
   },
   "keywords": [
     "education",
