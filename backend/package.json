@@ -9,8 +9,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "build": "echo 'Preparing backend for deployment'",
-    "azure-deploy": "npm install && npm run build",
+    "build": "echo 'Backend ready for deployment'",
+    "azure-deploy": "npm ci --only=production && npm run build",
+    "clean": "rm -rf node_modules && npm cache clean --force",
     "test": "echo \"No tests specified\" && exit 0"
   },
   "keywords": [
@@ -31,5 +32,8 @@
   "devDependencies": {
     "cross-env": "^7.0.3",
     "nodemon": "^2.0.22"
+  },
+  "overrides": {
+    "minimist": "^1.2.6"
   }
 }
