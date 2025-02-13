@@ -9,9 +9,10 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "build": "echo 'Backend ready for deployment'",
+    "build": "echo 'Backend deployment preparation'",
     "azure-deploy": "npm ci --only=production && npm run build",
-    "clean": "rm -rf node_modules && npm cache clean --force",
+    "prestart": "npm run validate-env",
+    "validate-env": "node -e \"if (!process.env.MONGO_URI) { console.error('MONGO_URI is not set'); process.exit(1); }\"",
     "test": "echo \"No tests specified\" && exit 0"
   },
   "keywords": [

@@ -1,20 +1,32 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const connectDB = require('./config/database');
+const mongoose = require('mongoose');
 const http = require('http');
 
+// Enhanced Error Handling
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  process.exit(1);
+});
+
+// Load Environment Variables
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Enhanced CORS Configuration for Azure
+// Robust CORS Configuration
 const corsOptions = {
   origin: [
     'http://localhost:3000', 
-    'https://my-upskill-global.azurewebsites.net', 
-    'https://my-upskill-global-backend.azurewebsites.net', 
+    'https://my-upskill-global.azurewebsites.net',
+    'https://my-upskill-global-backend.azurewebsites.net',
     '*'
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -24,34 +36,56 @@ const corsOptions = {
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Azure-specific Health Check Endpoint
+// Comprehensive Logging Middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    console.log(`${req.method} ${req.path} - ${res.statusCode} (${duration}ms)`);
+  });
+  
+  next();
+});
+
+// Azure-Specific Health Check
 app.get('/', (req, res) => {
   res.status(200).json({
     status: 'healthy',
     message: 'Backend is running successfully',
     environment: process.env.NODE_ENV || 'development',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    mongoConnection: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'
   });
 });
 
-// Logging Middleware with Enhanced Error Tracking
-app.use((req, res, next) => {
-  const start = Date.now();
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} - ${res.statusCode} (${duration}ms)`);
-  });
-  next();
-});
+// Database Connection with Enhanced Error Handling
+const connectDB = async () => {
+  try {
+    if (!process.env.MONGO_URI) {
+      throw new Error('MongoDB connection string is not defined');
+    }
 
-// Database Connection
-try {
-  connectDB();
-} catch (error) {
-  console.error('Database Connection Error:', error);
-  process.exit(1);
-}
+    await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+
+    console.log('MongoDB Connected Successfully');
+  } catch (error) {
+    console.error('MongoDB Connection Error:', {
+      message: error.message,
+      stack: error.stack
+    });
+    process.exit(1);
+  }
+};
+
+// Initialize Database Connection
+connectDB();
 
 // Routes
 app.use('/api/students', require('./routes/studentRoutes'));
@@ -70,6 +104,7 @@ app.use((err, req, res, next) => {
   res.status(statusCode).json(errorResponse);
 });
 
+// Server Initialization with Graceful Startup
 function startServer() {
   const server = http.createServer(app);
   
@@ -78,19 +113,23 @@ function startServer() {
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   });
 
+  // Graceful Shutdown
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM received. Shutting down gracefully');
+    server.close(() => {
+      console.log('Server closed');
+      mongoose.connection.close(false, () => {
+        console.log('MongoDB connection closed');
+        process.exit(0);
+      });
+    });
+  });
+
   return server;
 }
 
+// Start the server
 const server = startServer();
 
-// Graceful Shutdown
-process.on('SIGINT', () => {
-  console.log('Shutting down server...');
-  server.close(() => {
-    console.log('Server shut down.');
-    process.exit(0);
-  });
-});
-
-// Azure Functions Compatibility
+// Export for Azure Functions compatibility
 module.exports = app;

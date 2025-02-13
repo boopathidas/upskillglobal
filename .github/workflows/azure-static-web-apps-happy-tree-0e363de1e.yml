@@ -44,6 +44,12 @@ jobs:
         working-directory: ./backend
         run: npm ci --prefer-offline --no-audit
 
+      - name: Validate Backend Environment
+        working-directory: ./backend
+        run: npm run validate-env
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+
       - name: Build Backend
         working-directory: ./backend
         run: npm run build
@@ -51,7 +57,7 @@ jobs:
           MONGO_URI: ${{ secrets.MONGO_URI }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
 
-      - name: Prune Dependencies
+      - name: Prune Backend Dependencies
         run: |
           cd backend
           npm prune --production
