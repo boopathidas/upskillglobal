@@ -1,0 +1,33 @@
+trigger:
+  - main  # Runs pipeline on main branch push
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+  # Step 1: Manually install Node.js (Fix for 'UseNode' missing issue)
+  - script: |
+      curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+      sudo apt-get install -y nodejs
+      node -v
+      npm -v
+    displayName: 'Install Node.js'
+
+  # Step 2: Install frontend dependencies (React)
+  - script: |
+      cd frontend  # Navigate to React app folder
+      npm install
+      npm run build
+    displayName: 'Install and Build React App'
+
+  # Step 3: Install backend dependencies (Node.js)
+  - script: |
+      cd backend  # Navigate to backend folder
+      npm install
+    displayName: 'Install Node.js Dependencies'
+
+  # Step 4: Run backend tests (if available)
+  - script: |
+      cd backend
+      npm test
+    displayName: 'Run Backend Tests'
