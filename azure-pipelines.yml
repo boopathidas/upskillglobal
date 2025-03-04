@@ -1,0 +1,33 @@
+trigger:
+  - main  # Runs pipeline on main branch push
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+  # Step 1: Set up Node.js environment
+  - task: UseNode@2
+    inputs:
+      version: '18.x'  # Use the latest Node.js version
+
+  # Step 2: Install frontend dependencies (React)
+  - script: |
+      cd frontend  # Navigate to your React project folder
+      npm install
+      npm run build
+    displayName: 'Install and Build React App'
+
+  # Step 3: Install backend dependencies (Node.js)
+  - script: |
+      cd backend  # Navigate to your Node.js backend folder
+      npm install
+    displayName: 'Install Node.js Dependencies'
+
+  # Step 4: Run backend tests (if available)
+  - script: |
+      cd backend
+      npm test
+    displayName: 'Run Backend Tests'
+
+  # Step 5: Deploy Backend (Optional)
+  # Add deployment scripts here if needed
